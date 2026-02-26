@@ -1,0 +1,7 @@
+fastapi
+pypdf
+sentence-transformers
+numpy
+python-multipart
+openai
+chromadb
