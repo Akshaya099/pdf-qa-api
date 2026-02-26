@@ -28,9 +28,7 @@ def get_embedding(text):
     return response.data[0].embedding
 
 
-# ChromaDB persistent storage
-client = chromadb.PersistentClient(path="./chroma_db")
-
+client = chromadb.Client()
 collection = client.get_or_create_collection(name="pdf_documents")
 
 
