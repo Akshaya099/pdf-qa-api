@@ -1,11 +1,19 @@
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import tempfile   # ✅ NEW
 from rag_engine import RAGEngine
 from llm import generate_answer
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 rag = RAGEngine()
 
