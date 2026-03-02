@@ -13,7 +13,7 @@ app = FastAPI(title="PDF QA Service")
 # CORS configuration (allow frontend access)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # change in production
+    allow_origins=["https://pdf-qa-api-indol.vercel.app/docs"],   
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
