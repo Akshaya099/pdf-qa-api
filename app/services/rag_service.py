@@ -46,44 +46,51 @@ class RAGEngine:
 
     def ingest_pdf(self, file_path: str):
         """
-        Extract text from PDF, create embeddings,
-        and store chunks in ChromaDB.
+        Extract text page-by-page, create embeddings,
+        and store structured chunks with metadata.
         """
         reader = PdfReader(file_path)
+        filename = os.path.basename(file_path)
 
-        text = ""
-        for page in reader.pages:
+        total_chunks = 0
+
+        for page_number, page in enumerate(reader.pages, start=1):
             page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
 
-        if not text.strip():
-            raise ValueError("No readable text found in PDF.")
-
-        # split into chunks (better boundary handling)
-        chunks = [text[i:i+500] for i in range(0, len(text), 500)]
-
-        for chunk in chunks:
-            if not chunk.strip():
+            if not page_text or not page_text.strip():
                 continue
 
-            embedding = get_embedding(chunk)
+            # Chunk per page
+            chunks = [page_text[i:i+500] for i in range(0, len(page_text), 500)]
 
-            # create stable ID using hash (prevents duplicates)
-            chunk_id = hashlib.md5(chunk.encode()).hexdigest()
+            for chunk_index, chunk in enumerate(chunks):
+                if not chunk.strip():
+                    continue
 
-            collection.add(
-                ids=[chunk_id],
-                embeddings=[embedding],
-                documents=[chunk],
-                metadatas=[{"source": os.path.basename(file_path)}]
-            )
+                embedding = get_embedding(chunk)
 
-        print(f"Stored {len(chunks)} chunks in ChromaDB")
+                # Unique ID using document + page + chunk
+                unique_string = f"{filename}_{page_number}_{chunk_index}"
+                chunk_id = hashlib.md5(unique_string.encode()).hexdigest()
+
+                collection.add(
+                    ids=[chunk_id],
+                    embeddings=[embedding],
+                    documents=[chunk],
+                    metadatas=[{
+                        "document": filename,
+                        "page": page_number,
+                        "chunk_index": chunk_index
+                    }]
+                )
+
+                total_chunks += 1
+
+        print(f"Stored {total_chunks} structured chunks in ChromaDB")
 
     def search(self, query: str, k: int = 3):
         """
-        Perform semantic search on stored document chunks.
+        Perform semantic search and return structured results.
         """
         if not query.strip():
             return []
@@ -95,4 +102,17 @@ class RAGEngine:
             n_results=k
         )
 
-        return results.get("documents", [[]])[0]
+        documents = results.get("documents", [[]])[0]
+        metadatas = results.get("metadatas", [[]])[0]
+
+        structured_results = []
+
+        for doc, meta in zip(documents, metadatas):
+            structured_results.append({
+                "content": doc,
+                "document": meta.get("document"),
+                "page": meta.get("page"),
+                "chunk_index": meta.get("chunk_index")
+            })
+
+        return structured_results

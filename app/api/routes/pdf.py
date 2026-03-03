@@ -1,46 +1,81 @@
-from fastapi import APIRouter, Form, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status, BackgroundTasks, Form
 from fastapi.responses import FileResponse
 from app.services.pdf_service import create_pdf
 from app.api.deps import verify_token
+import os
 
 router = APIRouter(
     prefix="/pdf",
-    tags=["Text2PDF"]
+    tags=["PDF Utilities"]
 )
 
+
+# -------------------- Cleanup Helper -------------------- #
+
+def remove_file(path: str):
+    if os.path.exists(path):
+        os.remove(path)
+
+
+# -------------------- Endpoint -------------------- #
 
 @router.post(
     "/create",
-    summary="Generate PDF from text",
+    status_code=status.HTTP_200_OK,
+    summary="Generate a PDF from raw text",
     description="""
-🔐 **Authentication Required**
+Convert raw text into a downloadable PDF file.
 
-Enter text and a file name to create and download a PDF.
-
-**Note:**
-    Without authentication, the PDF will NOT be generated.
-"""
+Steps:
+1. Enter the text content you want to convert.
+2. Provide a filename (without .pdf extension).
+3. Submit the request to generate and download the PDF.
+""",
+    responses={
+        200: {
+            "description": "PDF generated successfully",
+            "content": {"application/pdf": {}}
+        },
+        401: {"description": "Unauthorized - Invalid or missing token"},
+        500: {"description": "Internal server error"}
+    }
 )
 def generate_pdf(
-    text: str = Form(
+    background_tasks: BackgroundTasks,
+    content: str = Form(
         ...,
-        description="Enter the text content to be converted into PDF"
+        min_length=1,
+        description="""
+Raw text content to convert into a PDF document.
+
+Example:
+This is a sample paragraph.
+
+You can paste large raw text here to generate a downloadable PDF file.
+"""
     ),
     filename: str = Form(
         ...,
-        description="Enter the desired name for the PDF file"
+        min_length=1,
+        description="""
+Desired name of the output PDF file (without extension).
+
+Example:
+my_document
+"""
     ),
     _: str = Depends(verify_token)
 ):
-    """
-    Generate a PDF from provided text and return it as a downloadable file.
-    """
-
     try:
-        file_path = create_pdf(text, filename)
+        filename = filename.strip()
 
         if not filename.lower().endswith(".pdf"):
             filename += ".pdf"
+
+        file_path = create_pdf(content, filename)
+
+        # Schedule automatic deletion after response is sent
+        background_tasks.add_task(remove_file, file_path)
 
         return FileResponse(
             path=file_path,
@@ -48,8 +83,8 @@ def generate_pdf(
             filename=filename
         )
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(
-            status_code=500,
-            detail=f"PDF generation failed: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="PDF generation failed."
         )

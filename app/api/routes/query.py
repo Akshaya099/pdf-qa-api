@@ -1,63 +1,97 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Form
+from typing import List
+from pydantic import BaseModel
 from app.services.rag_service import RAGEngine
 from app.services.llm_service import generate_answer
 from app.api.deps import verify_token
 
 router = APIRouter(
     prefix="/query",
-    tags=["Query"]
+    tags=["Question Answering"]
 )
 
 rag = RAGEngine()
 
 
+# -------------------- Response Models -------------------- #
+
+class SourceMetadata(BaseModel):
+    document: str
+    page: int
+    chunk_index: int
+
+
+class QueryResponse(BaseModel):
+    question: str
+    answer: str
+    sources: List[SourceMetadata]
+
+
+# -------------------- Endpoint -------------------- #
+
 @router.post(
     "/",
-    summary="Ask questions from uploaded documents",
+    response_model=QueryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Ask a question about the uploaded document",
     description="""
-🔐 **Authentication Required**
+Submit a question related to a previously uploaded PDF document.
 
-Ask questions based on the PDF you uploaded.
-
-**Note:**
-
-• Documents must be uploaded before querying.  
-• Without authentication, the request will NOT be processed.
-"""
+Steps:
+1. Ensure a PDF has been uploaded using the /upload endpoint.
+2. Enter your question in the input field below.
+3. Click "Execute" to receive the AI-generated answer with source references.
+""",
+    responses={
+        200: {"description": "Successful response"},
+        401: {"description": "Unauthorized - Invalid or missing token"},
+        404: {"description": "No relevant content found"},
+        500: {"description": "Internal server error"}
+    }
 )
 async def ask_question(
-    question: str = Query(
-        ...,
-        description="Enter your question related to the uploaded document"
-    ),
+    question: str = Form(
+    ...,
+    min_length=5,
+    description="""
+Enter your question related to the uploaded document.
+
+Example:
+Summarize the key objectives mentioned in the document.
+"""),
     _: str = Depends(verify_token)
 ):
-    """
-    Retrieve relevant document content and generate an AI-based answer.
-    """
-
     try:
-        # Retrieve relevant chunks
-        chunks = rag.search(question)
+        results = rag.search(question)
 
-        if not chunks:
-            return {
-                "answer": "No relevant content found. Please upload a document first."
-            }
+        if not results:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No relevant content found. Please upload a document first."
+            )
 
-        context = "\n".join(chunks)
+        # Build context from structured RAG output
+        context = "\n".join([r["content"] for r in results])
 
-        # Generate AI response
         answer = generate_answer(context, question)
 
-        return {
-            "question": question,
-            "answer": answer,
-            "source": "Generated from uploaded document context"
-        }
+        return QueryResponse(
+            question=question,
+            answer=answer,
+            sources=[
+                SourceMetadata(
+                    document=r["document"],
+                    page=r["page"],
+                    chunk_index=r["chunk_index"]
+                )
+                for r in results
+            ]
+        )
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         raise HTTPException(
-            status_code=500,
-            detail=f"Query processing failed: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Query processing failed."
         )

@@ -3,47 +3,64 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import upload, query, pdf
 
-# -------------------- App Initialization -------------------- #
+
+# -------------------- Application Initialization -------------------- #
 
 app = FastAPI(
-    title="PDF QA Service",
+    title="Secure Document Intelligence API",
     description="""
+Secure Document Intelligence API provides AI-powered document processing 
+and question-answering capabilities using Retrieval-Augmented Generation (RAG).
 
-🔐 Authentication Required
---------------------------
+Authentication
+--------------
+All protected endpoints require authentication using a Bearer token.
 
-### How to Authorize:
+To authorize requests:
+1. Click the **Authorize** button in Swagger UI.
+2. Enter your token (example):
 
-1️⃣ Click the **Authorize 🔒** 
+   YOUR_SECRET_TOKEN
 
-2️⃣ Enter your token (example):
+3. Click "Authorize" and close the dialog.
 
-    my_secure_token
+After authorization, the token will be automatically included in subsequent requests.
 
-3️⃣ Click **Authorize** and close the dialog.
+Available Features
+------------------
+1. Document Question Answering (RAG)
+   - Upload PDF documents
+   - Submit contextual questions
+   - Receive AI-generated answers with source references
 
-✅ You can now access protected endpoints.
-
----
-**Note:**
-
-Authorize once using the 🔒 button. the token will be sent automatically with future requests.
+2. Text-to-PDF Generation
+   - Submit text content with file name
+   - Generate a downloadable PDF document
 
 
-"""
+""",
+    version="1.0.0",
+    swagger_ui_parameters={
+        "docExpansion": "list",
+        "defaultModelsExpandDepth": -1
+    }
 )
 
+
 # -------------------- CORS Configuration -------------------- #
-# Allows frontend applications to access this API
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://pdf-qa-api-indol.vercel.app"],  # production frontend
+    allow_origins=[
+        "https://pdf-qa-api-indol.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# -------------------- Include Routers -------------------- #
+
+# -------------------- Router Registration -------------------- #
 
 app.include_router(upload.router)
 app.include_router(query.router)
