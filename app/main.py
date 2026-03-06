@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import upload, query, pdf
+from app.api.routes import upload, query, pdf, upload_file
 
 
 # -------------------- Application Initialization -------------------- #
@@ -9,37 +9,26 @@ from app.api.routes import upload, query, pdf
 app = FastAPI(
     title="Secure Document Intelligence API",
     description="""
-Secure Document Intelligence API provides AI-powered document processing 
+Secure Document Intelligence API provides AI-powered document processing
 and question-answering capabilities using Retrieval-Augmented Generation (RAG).
 
-Authentication
---------------
-All protected endpoints require authentication using a Bearer token.
-
-To authorize requests:
-1. Click the **Authorize** button in Swagger UI.
-2. Enter your token (example):
-
-   YOUR_SECRET_TOKEN
-
-3. Click "Authorize" and close the dialog.
-
-After authorization, the token will be automatically included in subsequent requests.
-
+Base URL
+--------
+```http
+https://pdf-qa-api-indol.vercel.app
+```
 Available Features
 ------------------
 1. Document Question Answering (RAG)
-   - Upload PDF documents
-   - Submit contextual questions
-   - Receive AI-generated answers with source references
+- Upload PDF documents for indexing
+- Ask questions related to uploaded documents
+- Receive AI-generated answers with source references
 
 2. Text-to-PDF Generation
-   - Submit text content with file name
-   - Generate a downloadable PDF document
-
-
+- Convert raw text into a downloadable PDF file
+- Specify a custom filename
 """,
-    version="1.0.0",
+    version="1.0.1",
     swagger_ui_parameters={
         "docExpansion": "list",
         "defaultModelsExpandDepth": -1
@@ -62,6 +51,8 @@ app.add_middleware(
 
 # -------------------- Router Registration -------------------- #
 
+
 app.include_router(upload.router)
 app.include_router(query.router)
 app.include_router(pdf.router)
+app.include_router(upload_file.router)

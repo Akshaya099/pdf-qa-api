@@ -39,10 +39,16 @@ collection = chroma_client.get_or_create_collection(name="pdf_documents")
 
 # -------------------- RAG Engine -------------------- #
 
+
+
 class RAGEngine:
     """
     Handles PDF ingestion and semantic search.
     """
+
+    def __init__(self):
+        # Track the latest uploaded document
+        self.current_document = None
 
     def ingest_pdf(self, file_path: str):
         """
@@ -51,6 +57,9 @@ class RAGEngine:
         """
         reader = PdfReader(file_path)
         filename = os.path.basename(file_path)
+
+        # Set current document
+        self.current_document = filename
 
         total_chunks = 0
 
@@ -69,7 +78,6 @@ class RAGEngine:
 
                 embedding = get_embedding(chunk)
 
-                # Unique ID using document + page + chunk
                 unique_string = f"{filename}_{page_number}_{chunk_index}"
                 chunk_id = hashlib.md5(unique_string.encode()).hexdigest()
 
@@ -90,17 +98,25 @@ class RAGEngine:
 
     def search(self, query: str, k: int = 3):
         """
-        Perform semantic search and return structured results.
+        Perform semantic search only on the latest uploaded document.
         """
         if not query.strip():
             return []
 
         query_embedding = [get_embedding(query)]
 
-        results = collection.query(
-            query_embeddings=query_embedding,
-            n_results=k
-        )
+        # Filter by latest uploaded document
+        if self.current_document:
+            results = collection.query(
+                query_embeddings=query_embedding,
+                n_results=k,
+                where={"document": self.current_document}
+            )
+        else:
+            results = collection.query(
+                query_embeddings=query_embedding,
+                n_results=k
+            )
 
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]

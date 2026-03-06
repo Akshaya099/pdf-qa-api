@@ -3,7 +3,8 @@ from pydantic import BaseModel
 import tempfile
 import os
 
-from app.services.rag_service import RAGEngine
+from app.services.rag_instance import rag
+
 from app.api.deps import verify_token
 
 router = APIRouter(
@@ -11,7 +12,7 @@ router = APIRouter(
     tags=["Document Management"]
 )
 
-rag = RAGEngine()
+
 
 
 # -------------------- Response Model -------------------- #
@@ -29,30 +30,96 @@ class UploadResponse(BaseModel):
     status_code=status.HTTP_201_CREATED,
     summary="Upload a PDF document",
     description="""
-Upload a PDF file to index it for semantic search.
+Upload a PDF document to index it for semantic search.
 
-After successful upload and processing,
-the document will be available for querying.
+After successful upload and processing, the document will be stored in the vector
+database and will be available for AI-powered question answering.
 
-How to Upload:
+Authentication
+--------------
+This endpoint requires Bearer Token authentication.
 
-- Use the "Choose File" button below.
-- Select a PDF file from your system.
-- Click "Execute" to upload and process the document.
+Header:
+```http
+Authorization: Bearer YOUR_API_TOKEN
+```
+Base URL
+--------
+```http
+https://pdf-qa-api-indol.vercel.app
+```
+Example Request
+---------------
 
-Only PDF files are supported.
+```http
+POST https://pdf-qa-api-indol.vercel.app/upload/
+Authorization: Bearer YOUR_API_TOKEN
+Content-Type: multipart/form-data
+
+content=This is a sample paragraph
+filename=test
+
+pdf_file=@document.pdf
+
+```
+
+Example Response
+----------------
+
+```json
+{
+  "message": "PDF uploaded and processed successfully.",
+  "status": "Document is ready for querying."
+}
 """,
     responses={
-        201: {"description": "Document uploaded and processed successfully"},
-        400: {"description": "Invalid file format"},
-        401: {"description": "Unauthorized - Invalid or missing token"},
-        500: {"description": "Internal server error"}
+        201: {
+            "description": "Document uploaded and processed successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "PDF uploaded and processed successfully.",
+                        "status": "Document is ready for querying."
+                    }
+                }
+            }
+        },
+        400: {
+            "description": "Invalid file format",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Only PDF files are allowed."
+                    }
+                }
+            }
+        },
+        401: {
+            "description": "Unauthorized - Invalid or missing token",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid or missing authentication token."
+                    }
+                }
+            }
+        },
+        500: {
+            "description": "Internal server error",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "File processing failed."
+                    }
+                }
+            }
+        }
     }
 )
 async def upload_pdf(
     pdf_file: UploadFile = File(
         ...,
-        description="Select a PDF document to upload and index for semantic search."
+        description="Upload a PDF document that will be indexed for semantic search and question answering."
     ),
     _: str = Depends(verify_token)
 ):
@@ -71,10 +138,10 @@ async def upload_pdf(
         with open(file_path, "wb") as buffer:
             buffer.write(await pdf_file.read())
 
-        # Process document
+        # Process document using RAG engine
         rag.ingest_pdf(file_path)
 
-        # Remove temp file after ingestion
+        # Remove temporary file
         if os.path.exists(file_path):
             os.remove(file_path)
 

@@ -23,13 +23,36 @@ def remove_file(path: str):
     "/create",
     status_code=status.HTTP_200_OK,
     summary="Generate a PDF from raw text",
-    description="""
-Convert raw text into a downloadable PDF file.
+description="""
+Convert raw text into a downloadable PDF document.
 
-Steps:
-1. Enter the text content you want to convert.
-2. Provide a filename (without .pdf extension).
-3. Submit the request to generate and download the PDF.
+Authentication
+--------------
+``` http
+Authorization: Bearer YOUR_API_TOKEN
+```
+Example Request
+---------------
+
+```http
+POST https://pdf-qa-api-indol.vercel.app/pdf/create
+Authorization: Bearer YOUR_API_TOKEN
+Content-Type: multipart/form-data
+
+content=This is a sample paragraph
+filename=test
+```
+
+Example Response
+---------------
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="test.pdf"
+
+(Binary PDF file download)
+```
 """,
     responses={
         200: {
@@ -51,7 +74,6 @@ Raw text content to convert into a PDF document.
 Example:
 This is a sample paragraph.
 
-You can paste large raw text here to generate a downloadable PDF file.
 """
     ),
     filename: str = Form(
