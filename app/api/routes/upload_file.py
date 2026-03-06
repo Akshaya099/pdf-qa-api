@@ -38,28 +38,51 @@ class UploadResponse(BaseModel):
     status_code=status.HTTP_201_CREATED,
     summary="Upload a PDF using Base64 encoding",
     description="""
-Upload a PDF file using JSON format with Base64 encoding.
+Upload a PDF document using a Base64 encoded JSON payload.
+
+This endpoint allows applications to upload a PDF file as a Base64 string.
 
 Authentication
 --------------
+This endpoint requires Bearer Token authentication.
+
 ```http
 Authorization: Bearer YOUR_API_TOKEN
 ```
+Base URL
+--------
+```http
+https://pdf-qa-api-indol.vercel.app
+```
+Endpoint
+--------
+```http
+POST https://pdf-qa-api-indol.vercel.app/upload-file
+```
+Headers
+-------
+```http
+Authorization: Bearer YOUR_API_TOKEN
+Content-Type: application/json
+```
 Example Request
 ---------------
+
 ```json
 {
-  "filename": "document.pdf",
-  "file_data": "JVBERi0xLjQKJcfs..."
+  "filename": "example.pdf",
+  "file_data": "BASE64_ENCODED_PDF_STRING"
 }
 ```
 Example Response
 ----------------
+
 ```json
 {
-  "message": "PDF uploaded and processed successfully.",
-  "status": "Document is ready for querying."
+  "message": "File uploaded and processed successfully",
+  "filename": "example.pdf"
 }
+
 """,
     responses={
         201: {

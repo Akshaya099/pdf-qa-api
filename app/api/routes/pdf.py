@@ -28,17 +28,31 @@ Convert raw text into a downloadable PDF document.
 
 Authentication
 --------------
+This endpoint requires Bearer Token authentication.
+
 ``` http
 Authorization: Bearer YOUR_API_TOKEN
+```
+Base URL
+--------
+```http
+POST https://pdf-qa-api-indol.vercel.app
+```
+Endpoint
+--------
+```http
+POST https://pdf-qa-api-indol.vercel.app/pdf/create
+```
+Headers
+-------
+```http
+Authorization: Bearer YOUR_API_TOKEN
+Content-Type: multipart/form-data
 ```
 Example Request
 ---------------
 
 ```http
-POST https://pdf-qa-api-indol.vercel.app/pdf/create
-Authorization: Bearer YOUR_API_TOKEN
-Content-Type: multipart/form-data
-
 content=This is a sample paragraph
 filename=test
 ```

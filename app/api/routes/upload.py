@@ -39,7 +39,6 @@ Authentication
 --------------
 This endpoint requires Bearer Token authentication.
 
-Header:
 ```http
 Authorization: Bearer YOUR_API_TOKEN
 ```
@@ -48,14 +47,20 @@ Base URL
 ```http
 https://pdf-qa-api-indol.vercel.app
 ```
-Example Request
----------------
-
+Endpoint
+--------
 ```http
 POST https://pdf-qa-api-indol.vercel.app/upload/
+```
+Headers
+-------
+```http
 Authorization: Bearer YOUR_API_TOKEN
 Content-Type: multipart/form-data
-
+```
+Example Request
+---------------
+```http
 content=This is a sample paragraph
 filename=test
 
